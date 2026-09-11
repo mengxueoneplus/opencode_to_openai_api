@@ -1,0 +1,37 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.x'
+
+      - name: Build Windows amd64
+        env:
+          CGO_ENABLED: '0'
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          mkdir -p dist
+          go build -mod=readonly -buildvcs=false -trimpath -ldflags="-s -w" -o dist/opencode-openai.exe .
+          cp config.example.toml README.md THIRD_PARTY_NOTICES dist/
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: opencode-openai-windows-amd64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
