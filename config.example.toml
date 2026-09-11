@@ -1,0 +1,21 @@
+[server]
+host = "127.0.0.1"
+port = 8000
+# 客户端填写这个本地密钥，不必暴露上游密钥。
+api_key = "local-opencode"
+
+[upstream]
+# Go 订阅；Zen 可改成 https://opencode.ai/zen/v1
+base_url = "https://opencode.ai/zen/go/v1"
+api_key = "YOUR_OPENCODE_API_KEY"
+# 如实标识转换器，不冒充官方客户端。
+user_agent = "opencode-openai-adapter/1.0"
+timeout = 120
+# Messages 协议必须有输出上限，客户端未指定时使用此值。
+max_tokens = 4096
+
+# 精确模型名覆盖自动路由，可选 chat / messages / responses。
+# 自动路由：Claude/Qwen => messages，GPT/Grok/Muse => responses，
+# Go 的 MiniMax => messages，其余 => chat。Gemini 原生协议暂不支持。
+[upstream.model_protocols]
+# "minimax-m2.5" = "chat"

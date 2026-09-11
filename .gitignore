@@ -1,0 +1,18 @@
+# 私有配置
+config.toml
+
+# 构建产物与本地工作文件
+outputs/
+work/
+dist/
+*.exe
+*.log
+/opencode-openai
+
+# 测试不提交
+*_test.go
+*_test.py
+test_*.py
+tests/
+testdata/
+coverage*
