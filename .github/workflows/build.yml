@@ -1,37 +1,66 @@
-name: Build Windows EXE
+name: Build and Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号，例如 v1.0.0，每次使用新版本号'
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v7
+
+      - name: Validate version
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "版本号格式应为 v1.0.0"
+            exit 1
+          fi
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "这个版本已经发布，请使用新版本号"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null 2>&1; then
+            echo "这个标签已经存在，请使用新版本号"
+            exit 1
+          fi
 
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
           go-version: '1.25.x'
 
-      - name: Build Windows amd64
+      - name: Build Windows package
         env:
           CGO_ENABLED: '0'
           GOOS: windows
           GOARCH: amd64
         run: |
           mkdir -p dist
-          go build -mod=readonly -buildvcs=false -trimpath -ldflags="-s -w" -o dist/opencode-openai.exe .
+          go build -mod=readonly -buildvcs=false -trimpath \
+            -ldflags="-s -w" -o dist/opencode-openai.exe .
           cp config.example.toml README.md THIRD_PARTY_NOTICES dist/
+          cd dist
+          zip -r ../opencode-openai-windows-amd64.zip .
 
-      - name: Upload package
-        uses: actions/upload-artifact@v7
-        with:
-          name: opencode-openai-windows-amd64
-          path: dist/
-          if-no-files-found: error
-          retention-days: 30
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release create "$VERSION" \
+            opencode-openai-windows-amd64.zip \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --generate-notes
